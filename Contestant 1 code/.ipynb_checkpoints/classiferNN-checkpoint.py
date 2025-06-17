@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.init as init
 import torch.nn.functional as F
 import time
 
@@ -52,7 +53,8 @@ class CNN(nn.Module):
             s = strides[i]
             p = paddings[i]
 
-            layers.append(nn.Conv2d(in_channels, conv_channels[i], kernel_size=k, stride=s, padding=p))
+            conv = nn.Conv2d(in_channels, conv_channels[i], kernel_size=k, stride=s, padding=p)
+            layers.append(conv)
             layers.append(nn.ReLU())
             in_channels = conv_channels[i]
 
@@ -76,6 +78,9 @@ class CNN(nn.Module):
 
         self.fc = nn.Sequential(*fc_layers)
 
+        # Apply He initialization
+        self._initialize_weights()
+
     def forward(self, x):
         x = self.conv(x)
         x = x.view(x.size(0), -1)
@@ -85,6 +90,13 @@ class CNN(nn.Module):
     def get_num_params(self):
         total_params = sum(p.numel() for p in self.parameters() if p.requires_grad)
         print(f"Total trainable parameters: {total_params}")
+
+    def _initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
+                nn.init.kaiming_normal_(m.weight, nonlinearity='relu')
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
 
 
 
